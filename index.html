@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<title>Reality home</title>
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+<body>
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+	<script type="importmap">
+		{
+			"imports": {
+				"three": "https://unpkg.com/three@0.140.0/build/three.module.js",
+				"stats": "https://unpkg.com/three@0.140.0/examples/jsm/libs/stats.module.js",
+				"gui": "https://unpkg.com/three@0.140.0/examples/jsm/libs/lil-gui.module.min.js",
+				"gltfLoader": "https://unpkg.com/three@0.140.0/examples/jsm/loaders/GLTFLoader.js",
+				"dracoLoader": "https://unpkg.com/three@0.140.0/examples/jsm/loaders/DRACOLoader.js",
+				"orbitcontrols": "https://unpkg.com/three@0.140.0/examples/jsm/controls/OrbitControls.js",
+				"effectComposer": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/EffectComposer.js",
+				"renderPass": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/RenderPass.js",
+				"glitchPass": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/GlitchPass.js"
+			}
+		}
+	</script>
+	<script type="module">
+		import * as THREE from 'three';
+		import Stats from 'stats';
+		import GUI from 'gui';
+
+		import { OrbitControls } from 'orbitcontrols';
+		import { GLTFLoader } from 'gltfLoader';
+		import { DRACOLoader } from 'dracoLoader';
+		
+		import { EffectComposer } from 'effectComposer';
+		import { RenderPass } from 'renderPass';
+		import { GlitchPass } from 'glitchPass';
+
+		let camera, scene, controls, renderer, composer, loader;
+		let gui, stats;
+		let logo, bg;
+		let glitchPass;
+
+		let guiValues = {
+			paused: false,
+			glitchFx: false,
+		}
+
+		function initLoader(){
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath('https://unpkg.com/three@0.140.0/examples/js/libs/draco/');
+			// (Optional) Override detection of WASM support.
+			//dracoLoader.setDecoderConfig({type: 'js'});
+			// init object loader with decompressor
+			loader = new GLTFLoader();
+			loader.setDRACOLoader(dracoLoader);
+		}
+
+		function createBG() {
+			const geo = new THREE.IcosahedronGeometry(3, 5);
+			//const geo = new THREE.BoxGeometry( 2, 2, 2 );
+			console.log(geo);
+			const pos = geo.attributes.position;
+			const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
+			const boxGeo = new THREE.BoxGeometry();
+			//const m = new THREE.InstancedMesh(boxGeo, mat, pos.count);
+			//m.instanceMatrix.needsUpdate = true;
+			const m = new THREE.Mesh(geo, mat);
+
+			//const toRad = 180 / Math.PI;
+
+			// lines helper
+			const lines = [];
+
+			for (let i = 0; i < pos.count; i++) {
+				const offset = i * pos.itemSize;
+				const p = new THREE.Vector3(pos.array[offset + 0], pos.array[offset + 1], pos.array[offset + 2]);
+				//console.log(p);
+
+				lines.push(new THREE.Vector3());
+				lines.push(p);
+
+				const rotY = Math.atan2(p.x, p.z);
+				const rotZ = Math.atan2(p.x, p.y);
+				const rotE = new THREE.Euler(0, rotY, rotZ, 'XYZ' );
+				const quat = new THREE.Quaternion().setFromEuler(rotE);
+
+				const t = new THREE.Matrix4().compose(p, quat, new THREE.Vector3(0.4,0.4,0.4));
+				//console.log(t);
+
+				//m.setMatrixAt(i, t);				
+			}
+
+			//const lineRays = new THREE.BufferGeometry().setFromPoints( lines );
+			//const line = new THREE.LineSegments( lineRays, new THREE.LineBasicMaterial({color: 0xff0000}) );
+			//scene.add( line );
+
+			return m;
+		}
+
+		function init() {
+			initLoader();
+
+			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.01, 20 );
+			camera.position.z = 2.5;
+
+			scene = new THREE.Scene();
+
+			//const ambientLight = new THREE.AmbientLight( 0xcccccc, 0.4 );
+			//scene.add( ambientLight );
+
+			const pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+			camera.add( pointLight );
+
+			scene.add( camera );
+			
+			bg = createBG();
+			scene.add( bg );
+
+			// load me a logo
+			loader.load('mesh/reality_logo.glb', function (glTF) {
+				logo = glTF.scene.children[0];
+				const mat = new THREE.MeshStandardMaterial({color:0xff000099,flatShading:true});
+				logo.material = mat;
+				scene.add(logo);
+			});			
+
+			renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			if (!guiValues.paused) {
+				renderer.setAnimationLoop( animate );
+			}
+			document.body.appendChild( renderer.domElement );
+
+			// postprocessing
+			composer = new EffectComposer( renderer );
+			composer.addPass( new RenderPass( scene, camera ) );
+			// post process effect 
+			glitchPass = new GlitchPass();
+			composer.addPass( glitchPass );
+
+			controls = new OrbitControls( camera, renderer.domElement );
+
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+			window.addEventListener( 'resize', onWindowResize );
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		function animate(time) {
+			render(time);
+			stats.update();
+		}
+
+		function render(time) {
+			if (logo) {
+				logo.rotation.y = time / 2000;
+			}
+			//bg.rotation.x = time / 6000;
+			//bg.rotation.y = time / 4000;
+			if (guiValues.glitchFx) {
+				composer.render();
+			} else {
+				renderer.render( scene, camera );
+			}
+		}
+
+		// gui stuff
+		gui = new GUI();
+		gui.add(guiValues, 'paused').onChange(function(paused) {
+			if (!paused) {
+				renderer.setAnimationLoop( animate );
+			} else {
+				renderer.setAnimationLoop( null );
+			}
+		});
+		gui.add(guiValues, 'glitchFx');
+
+		// start all
+		init();	
+	</script>
+</body>
+</html>
