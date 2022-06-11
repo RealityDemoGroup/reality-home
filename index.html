@@ -63,40 +63,49 @@
 			const geo = new THREE.IcosahedronGeometry(3, 5);
 			//const geo = new THREE.BoxGeometry( 2, 2, 2 );
 			console.log(geo);
-			const pos = geo.attributes.position;
-			const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
-			const boxGeo = new THREE.BoxGeometry();
-			//const m = new THREE.InstancedMesh(boxGeo, mat, pos.count);
-			//m.instanceMatrix.needsUpdate = true;
-			const m = new THREE.Mesh(geo, mat);
+			const p = geo.attributes.position;
+			const n = geo.attributes.normal;
+			const noTri = p.count / 3;	// number of triangles
 
 			//const toRad = 180 / Math.PI;
 
-			// lines helper
-			const lines = [];
+			const pos = [];
+			const nrm = [];
 
-			for (let i = 0; i < pos.count; i++) {
-				const offset = i * pos.itemSize;
-				const p = new THREE.Vector3(pos.array[offset + 0], pos.array[offset + 1], pos.array[offset + 2]);
-				//console.log(p);
-
-				lines.push(new THREE.Vector3());
-				lines.push(p);
-
-				const rotY = Math.atan2(p.x, p.z);
-				const rotZ = Math.atan2(p.x, p.y);
-				const rotE = new THREE.Euler(0, rotY, rotZ, 'XYZ' );
-				const quat = new THREE.Quaternion().setFromEuler(rotE);
-
-				const t = new THREE.Matrix4().compose(p, quat, new THREE.Vector3(0.4,0.4,0.4));
-				//console.log(t);
-
-				//m.setMatrixAt(i, t);				
+			let o = 0; // offset in arrays
+			for (let i = 0; i < noTri; i++) {
+				// do some triangles
+				for (let j = 0; j < 3; j++) {
+					// X
+					pos.push(p.array[o]);
+					nrm.push(n.array[o]);
+					o++;
+					// Y
+					pos.push(p.array[o]);
+					nrm.push(n.array[o]);
+					o++;
+					// Z
+					pos.push(p.array[o]);
+					nrm.push(n.array[o]);
+					o++;
+				}
 			}
 
-			//const lineRays = new THREE.BufferGeometry().setFromPoints( lines );
-			//const line = new THREE.LineSegments( lineRays, new THREE.LineBasicMaterial({color: 0xff0000}) );
-			//scene.add( line );
+			function disposeArray() {
+				this.array = null;
+			}
+
+			const newGeo = new THREE.BufferGeometry();
+			newGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( pos, 3 ).onUpload( disposeArray ) );
+			newGeo.setAttribute( 'normal', new THREE.Float32BufferAttribute( nrm, 3 ).onUpload( disposeArray ) );
+			newGeo.computeBoundingSphere();
+
+			const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.BackSide});
+			//const boxGeo = new THREE.BoxGeometry();
+			//const m = new THREE.InstancedMesh(boxGeo, mat, pos.count);
+			//m.instanceMatrix.needsUpdate = true;
+			//const m = new THREE.Mesh(geo, mat);
+			const m = new THREE.Mesh(newGeo, mat);
 
 			return m;
 		}
