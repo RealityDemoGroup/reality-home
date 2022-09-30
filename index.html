@@ -136,11 +136,11 @@
 			// do some triangles
 			let o = 0; // offset in arrays
 			for (let i = 0; i < noTri; i++) {
-				const v1 = new THREE.Vector3(p.array[o], p.array[o+1], p.array[o+2]);
+				const v1 = new THREE.Vector3().fromArray(p.array, o);
 				o += 3;
-				const v2 = new THREE.Vector3(p.array[o], p.array[o+1], p.array[o+2]);
+				const v2 = new THREE.Vector3().fromArray(p.array,o);
 				o += 3;
-				const v3 = new THREE.Vector3(p.array[o], p.array[o+1], p.array[o+2]);
+				const v3 = new THREE.Vector3().fromArray(p.array,o);
 				o += 3;
 				bg.add(createPyramid(v1, v2, v3, mat));
 			}
