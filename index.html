@@ -40,6 +40,7 @@
 		import { GlitchPass } from 'glitchPass';
 
 		let camera, scene, controls, renderer, composer, loader;
+		const cameraPosition = new THREE.Vector3(0,0,2.5);
 		let cubeCamera, cubeRenderTarget;
 		let gui, stats;
 		let logo, bg;
@@ -47,6 +48,7 @@
 
 		let guiValues = {
 			paused: false,
+			animateCamera: true,
 			glitchFx: false,
 		}
 
@@ -159,19 +161,20 @@
 			camera.add( pointLight );
 			scene.add( camera );
 
-			const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
+			//const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
+			const mat = new THREE.MeshStandardMaterial({color: 0xccccff, flatShading:true, side:THREE.FrontSide});
 
 			// reflection on cube map
-			//cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 512 );
-			//cubeRenderTarget.texture.type = THREE.HalfFloatType;
-			//cubeCamera = new THREE.CubeCamera( 0.01, 20, cubeRenderTarget );
-			//cubeCamera.position.set( 0, 0, 2.5 );
-			//const mat = new THREE.MeshStandardMaterial({
-			//	envMap: cubeRenderTarget.texture,
-			//	roughness: 0.05,
-			//	metalness: 1,
-			//	side: THREE.BackSide
-			//});
+			cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 256 );
+			cubeRenderTarget.texture.type = THREE.HalfFloatType;
+			cubeCamera = new THREE.CubeCamera( 0.01, 20, cubeRenderTarget );
+			const matLogo = new THREE.MeshStandardMaterial({
+				envMap: cubeRenderTarget.texture,
+				roughness: 0.05,
+				metalness: 1,
+				color: 0x4444aa,
+				//flatShading:true,
+			});
 
 			// background
 			bg = new THREE.Group();
@@ -181,9 +184,8 @@
 			// load me a logo
 			loader.load('mesh/reality_logo.glb', function (glTF) {
 				logo = glTF.scene.children[0];
-				const mat = new THREE.MeshStandardMaterial({color:0xff000099,flatShading:true});
-				//const mat = new THREE.MeshStandardMaterial({color:0xffcccccc,flatShading:true});
-				logo.material = mat;
+				//logo.material = new THREE.MeshStandardMaterial({color:0xff000099,flatShading:true});;
+				logo.material = matLogo;
 				scene.add(logo);
 			});			
 
@@ -223,9 +225,6 @@
 		}
 
 		function render(time) {
-			if (logo) {
-				logo.rotation.y = time / 2000;
-			}
 			if (bg) {
 				for (let i = 0; i < bg.children.length; i++) {
 					bg.children[i].rotation.x = time / 1000;
@@ -233,8 +232,27 @@
 					bg.children[i].rotation.z = time / 2000;
 				}
 			}
-			// reflection on cube map
-			// cubeCamera.update( renderer, scene );
+
+			if (logo) {
+				logo.rotation.y = time / 8000;
+				// reflection on cube map
+				logo.visible = false;
+				cubeCamera.update( renderer, scene );
+				logo.visible = true;
+			}
+
+			// animate camera
+			if (guiValues.animateCamera) {
+				const cr = new THREE.Euler( time / 8000, time / 12000, time / 4000, 'XYZ' );
+				const cp = cameraPosition.clone();
+				cp.applyEuler(cr);
+				camera.position.x = cp.x;
+				camera.position.y = cp.y;
+				camera.position.z = cp.z;
+				camera.lookAt(0,0,0);
+				//camera.matrixWorldNeedsUpdate = true;
+			}
+
 			if (guiValues.glitchFx) {
 				composer.render();
 			} else {
@@ -251,6 +269,15 @@
 				renderer.setAnimationLoop( null );
 			}
 		});
+		gui.add(guiValues, 'animateCamera').onChange(function(animateCamera) {
+			if (!animateCamera) {
+				camera.position.x = cameraPosition.x;
+				camera.position.y = cameraPosition.y;
+				camera.position.z = cameraPosition.z;
+				camera.lookAt(0,0,0);
+				//camera.matrixWorldNeedsUpdate = true;
+			}
+		});;
 		gui.add(guiValues, 'glitchFx');
 
 		// start all
