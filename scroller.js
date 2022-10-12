@@ -34,6 +34,7 @@ class Scroller {
 
 	create() {
 		this.scroll = new THREE.Group();
+		this.scroll.rotateY(Math.PI);
 
 		// ref: https://github.com/mrdoob/three.js/blob/master/examples/jsm/loaders/FontLoader.js
 		// scale and line height from font
@@ -105,32 +106,37 @@ class Scroller {
 		const PI2 = Math.PI * 2;
 		// angle position depending on time
 		const anglePos = time / this.speed;
-		// angle shown
-		let angleShown = anglePos % this.angleTotal;
+		// angle start show
+		let angleStart = anglePos % this.angleTotal;
 		// complete scroll shown repeat it
 		const repeat = anglePos > this.angleTotal;
-		// find start letter index
+		if (repeat) {
+			angleStart += this.angleTotal;
+		}
+		// find start letter index and correct draw angle start
 		let i = 0;
-		while (angleShown > PI2) {
+		while (angleStart > PI2) {
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
-			angleShown -= this.angles[i++] / 2;
+			angleStart -= this.angles[i++] / 2;
+			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
-			angleShown -= this.angles[i] / 2;
-		}
-		let ta = angleShown;
-		let endAngle = 0;
-		if (repeat) {
-			endAngle -= (PI2 - ta);
+			angleStart -= this.angles[i] / 2;
 		}
 
-		// show scroll
+		// ending angle for draw
+		let angleEnd = 0;
+		if (repeat) {
+			angleEnd -= (PI2 - angleStart);
+		}
+
+		// show scroll letters
 		this.hideAll();
-		while (ta > endAngle) {
+		while (angleStart > angleEnd) {
 			const m = this.meshes[i];
 			if (null != m) {
-				const rot = PI2 - ta;
+				const rot = PI2 - angleStart;
 				m.position.x = this.radius * Math.sin(rot);
 				m.position.y = 0;
 				m.position.z = this.radius * Math.cos(rot);
@@ -141,12 +147,10 @@ class Scroller {
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
-			ta -= this.angles[i++] / 2;
-			if (i >= this.text.length) {
-				i = 0;
-			}
+			angleStart -= this.angles[i++] / 2;
+			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
-			ta -= this.angles[i] / 2;
+			angleStart -= this.angles[i] / 2;
 		}
 	}
 }
