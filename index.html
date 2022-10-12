@@ -14,15 +14,18 @@
 	<script type="importmap">
 		{
 			"imports": {
-				"three": "https://unpkg.com/three@0.140.0/build/three.module.js",
-				"stats": "https://unpkg.com/three@0.140.0/examples/jsm/libs/stats.module.js",
-				"gui": "https://unpkg.com/three@0.140.0/examples/jsm/libs/lil-gui.module.min.js",
-				"gltfLoader": "https://unpkg.com/three@0.140.0/examples/jsm/loaders/GLTFLoader.js",
-				"dracoLoader": "https://unpkg.com/three@0.140.0/examples/jsm/loaders/DRACOLoader.js",
-				"orbitcontrols": "https://unpkg.com/three@0.140.0/examples/jsm/controls/OrbitControls.js",
-				"effectComposer": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/EffectComposer.js",
-				"renderPass": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/RenderPass.js",
-				"glitchPass": "https://unpkg.com/three@0.140.0/examples/jsm/postprocessing/GlitchPass.js"
+				"three": "https://unpkg.com/three@0.145.0/build/three.module.js",
+				"stats": "https://unpkg.com/three@0.145.0/examples/jsm/libs/stats.module.js",
+				"gui": "https://unpkg.com/three@0.145.0/examples/jsm/libs/lil-gui.module.min.js",
+				"gltfLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/GLTFLoader.js",
+				"dracoLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/DRACOLoader.js",
+				"fontLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/FontLoader.js",
+				"textGeometry": "https://unpkg.com/three@0.145.0/examples/jsm/geometries/TextGeometry.js",
+				"orbitcontrols": "https://unpkg.com/three@0.145.0/examples/jsm/controls/OrbitControls.js",
+				"effectComposer": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/EffectComposer.js",
+				"renderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/RenderPass.js",
+				"glitchPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/GlitchPass.js",
+				"scroller": "./scroller.js"
 			}
 		}
 	</script>
@@ -34,32 +37,52 @@
 		import { OrbitControls } from 'orbitcontrols';
 		import { GLTFLoader } from 'gltfLoader';
 		import { DRACOLoader } from 'dracoLoader';
+		import { FontLoader } from 'fontLoader';
+		import { TextGeometry } from 'textGeometry';
+
+		import  { Scroller } from 'scroller';
 		
 		import { EffectComposer } from 'effectComposer';
 		import { RenderPass } from 'renderPass';
 		import { GlitchPass } from 'glitchPass';
 
 		let camera, scene, controls, renderer, composer, loader;
-		const cameraPosition = new THREE.Vector3(0,0,2.5);
+		const cameraPosition = new THREE.Vector3(0, 2, 5.5);
 		let cubeCamera, cubeRenderTarget;
 		let gui, stats;
 		let logo, bg;
 		let glitchPass;
+		let loaderFont, scroll;
+		let scrollText = "Welcome to Reality home! This small intro is done for fun by Quille. --->";
 
 		let guiValues = {
 			paused: false,
 			animateCamera: true,
 			glitchFx: false,
+			scrollPos: 0,
+			scrollMin: 0,
+			scrollMax: Math.PI * 4,
+			scrollStep: Math.PI / 320,
+			scrollUp: function() {
+				guiValues.scrollPos += guiValues.scrollStep;
+			},
+			scrollDown: function() {
+				guiValues.scrollPos -= guiValues.scrollStep;
+			}
 		}
 
 		function initLoader(){
+			// mesh loader
 			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath('https://unpkg.com/three@0.140.0/examples/js/libs/draco/');
+			dracoLoader.setDecoderPath('https://unpkg.com/three@0.145.0/examples/js/libs/draco/');
 			// (Optional) Override detection of WASM support.
 			//dracoLoader.setDecoderConfig({type: 'js'});
 			// init object loader with decompressor
 			loader = new GLTFLoader();
 			loader.setDRACOLoader(dracoLoader);
+
+			// font loader
+			loaderFont = new FontLoader();
 		}
 
 		function disposeArray() {
@@ -127,7 +150,7 @@
 		}
 
 		function createBG(bg, mat) {
-			const geo = new THREE.IcosahedronGeometry(5, 15);
+			const geo = new THREE.IcosahedronGeometry(8, 15);
 			//bg.add(new THREE.Mesh(geo, mat));
 
 			const p = geo.attributes.position;
@@ -154,7 +177,9 @@
 			scene = new THREE.Scene();
 
 			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.01, 20 );
-			camera.position.z = 2.5;
+			camera.position.x = cameraPosition.x;
+			camera.position.y = cameraPosition.y;
+			camera.position.z = cameraPosition.z;
 
 			const pointLight = new THREE.PointLight( 0xffffff, 0.8 );
 			pointLight.position.set( 0, 2, 2 );
@@ -164,7 +189,12 @@
 			//const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
 			const mat = new THREE.MeshStandardMaterial({color: 0xccccff, flatShading:true, side:THREE.FrontSide});
 
-			// reflection on cube map
+			// background
+			bg = new THREE.Group();
+			createBG(bg, mat);
+			scene.add(bg);
+
+			// reflection on cube map for logo
 			cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 256 );
 			cubeRenderTarget.texture.type = THREE.HalfFloatType;
 			cubeCamera = new THREE.CubeCamera( 0.01, 20, cubeRenderTarget );
@@ -176,20 +206,27 @@
 				//flatShading:true,
 			});
 
-			// background
-			bg = new THREE.Group();
-			createBG(bg, mat);
-			scene.add(bg);
-
 			// load me a logo
 			loader.load('mesh/reality_logo.glb', function (glTF) {
 				logo = glTF.scene.children[0];
 				//logo.material = new THREE.MeshStandardMaterial({color:0xff000099,flatShading:true});;
 				logo.material = matLogo;
 				scene.add(logo);
-			});			
+			});
 
-			renderer = new THREE.WebGLRenderer( { antialias: true } );
+			// load me a font and kickstart scrolling
+			loaderFont.load('font/Orbitron_regular.json', function(font) {
+				const mat = new THREE.MeshStandardMaterial({color: 0x0000ff, flatShading:true, side:THREE.FrontSide});
+				const sc = new Scroller(scrollText, font, mat);
+				const sg = sc.create();
+				scene.add(sg);
+				scroll = sc;	// this will enable rendering
+			});
+
+			renderer = new THREE.WebGLRenderer({
+				antialias: true,
+				powerPreference: "high-performance",
+			});
 			renderer.setPixelRatio( window.devicePixelRatio );
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			//renderer.outputEncoding = THREE.sRGBEncoding;
@@ -241,6 +278,11 @@
 				logo.visible = true;
 			}
 
+			if (scroll) {
+				scroll.render(time);
+				//scroll.render(guiValues.scrollPos * scroll.speed);
+			}
+
 			// animate camera
 			if (guiValues.animateCamera) {
 				const cr = new THREE.Euler( time / 8000, time / 12000, time / 4000, 'XYZ' );
@@ -250,7 +292,6 @@
 				camera.position.y = cp.y;
 				camera.position.z = cp.z;
 				camera.lookAt(0,0,0);
-				//camera.matrixWorldNeedsUpdate = true;
 			}
 
 			if (guiValues.glitchFx) {
@@ -275,10 +316,12 @@
 				camera.position.y = cameraPosition.y;
 				camera.position.z = cameraPosition.z;
 				camera.lookAt(0,0,0);
-				//camera.matrixWorldNeedsUpdate = true;
 			}
 		});;
 		gui.add(guiValues, 'glitchFx');
+		//gui.add(guiValues, 'scrollPos', guiValues.scrollMin, guiValues.scrollMax, guiValues.scrollStep).listen();
+		//gui.add(guiValues, 'scrollUp');
+		//gui.add(guiValues, 'scrollDown');
 
 		// start all
 		init();	
