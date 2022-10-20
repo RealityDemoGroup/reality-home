@@ -8,24 +8,32 @@ class Scroller {
 		this.font = font;
 		this.material = material;
 
-		this.fontSize = 0.5;
-		this.fontHeight = 0.3;
-		this.letterSpacing = 1.1;
-		this.curveSegments = 4;
-
-		this.bevelThickness = 0.02;
-		this.bevelSize = 0.02;
-		this.bevelSegments = 1;
-		this.bevelEnabled = true;
+		this.setFontParams(0.5, 0.3, 1.1, 4);
+		this.setFontBevel(0.02, 0.02, 1);
 		
 		this.radius = 3;
 		this.speed = 2000;
 
-		this.meshes = [];
-		this.angles = [];
+		this.meshesMap = new Map();
 		this.angleTotal = 0;
 
 		this.scroll = null;
+	}
+
+	setFontParams(size, height, letterSpacing, curveSegments) {
+		this.fontSize = size;
+		this.fontHeight = height;
+		this.letterSpacing = letterSpacing;
+		this.curveSegments = curveSegments;
+	}
+
+	setFontBevel(size, thickness, segments) {
+		this.bevelSize = size;
+		this.bevelThickness = thickness;
+		this.bevelSegments = segments;
+		this.bevelEnabled = this.bevelSize != 0 
+			&& this.bevelThickness != 0 
+			&& this.bevelSegments != 0;
 	}
 
 	widthToAngle(width) {
@@ -43,6 +51,14 @@ class Scroller {
 		// space letter width
 		const spaceGlyph = this.font.data.glyphs[" "];
 		const spaceWidth = spaceGlyph.ha * fontScale;
+		// space angle
+		const spaceAngle = this.widthToAngle(spaceWidth) * this.letterSpacing;
+
+		// add space to meshes map to have angle width
+		this.meshesMap.set(" ", {
+			angle: spaceAngle,
+			mesh: null
+		});
 
 		// text geometry params
 		const txtGeoParams = {
@@ -60,11 +76,7 @@ class Scroller {
 		for (let i = 0; i < this.text.length; i++) {
 			const letter = this.text[i];
 			if (" " == letter) {
-				const angle = this.widthToAngle(spaceWidth) * this.letterSpacing;
-				this.angleTotal += angle;
-				this.angles.push(angle);
-
-				this.meshes.push(null);
+				this.angleTotal += spaceAngle;
 				continue;
 			}
 			this.createLetter(letter, lineHeight, txtGeoParams);
@@ -74,6 +86,14 @@ class Scroller {
 	}
 
 	createLetter(letter, lineHeight, txtGeoParams) {
+		let mi = this.meshesMap.get(letter);
+		// already created
+		if (undefined != mi) {
+			this.angleTotal += mi.angle;
+			return;
+		}
+
+		// create
 		const g = new TextGeometry(letter, txtGeoParams);
 		g.computeBoundingBox();
 		const width = g.boundingBox.max.x - g.boundingBox.min.x;
@@ -83,23 +103,27 @@ class Scroller {
 
 		const angle = this.widthToAngle(width) * this.letterSpacing;
 		this.angleTotal += angle;
-		this.angles.push(angle);
 
-		const m = new THREE.Mesh(g, this.material);
-		m.name = letter;
-		m.visible = false;
-		this.meshes.push(m);
-		this.scroll.add(m);
+		const maxInstance = Math.ceil(Math.PI * 2 / angle);
+		mi = new THREE.InstancedMesh(g, this.material, maxInstance);
+		mi.name = letter;
+		mi.visible = false;
+		mi.count = 0; // no instances displayed
+		this.meshesMap.set(letter, {
+			angle: angle,
+			mesh: mi
+		});
+		this.scroll.add(mi);
 	}
 
 	hideAll() {
 		// hide all scroll letters
-		for (let i = 0; i < this.meshes.length; i++) {
-			if (null == this.meshes[i]) {
-				continue;
+		this.meshesMap.forEach((v, k) => {
+			if (null != v.mesh) {
+				v.mesh.visible = false;
+				v.mesh.count = 0;
 			}
-			this.meshes[i].visible = false;
-		}
+		});
 	}
 
 	render(time) {
@@ -119,10 +143,12 @@ class Scroller {
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
-			angleStart -= this.angles[i++] / 2;
+			let letter = this.meshesMap.get(this.text[i++]);
+			angleStart -= letter.angle / 2;
 			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
-			angleStart -= this.angles[i] / 2;
+			letter = this.meshesMap.get(this.text[i]);
+			angleStart -= letter.angle / 2;
 		}
 
 		// ending angle for draw
@@ -133,24 +159,38 @@ class Scroller {
 
 		// show scroll letters
 		this.hideAll();
+		const quaternion = new THREE.Quaternion();
+		const scale = new THREE.Vector3(1,1,1);
+		const matrix = new THREE.Matrix4();
 		while (angleStart > angleEnd) {
-			const m = this.meshes[i];
-			if (null != m) {
+			let letter = this.meshesMap.get(this.text[i++]);
+			if (null != letter.mesh) {
 				const rot = PI2 - angleStart;
-				m.position.x = this.radius * Math.sin(rot);
-				m.position.y = 0;
-				m.position.z = this.radius * Math.cos(rot);
-				m.setRotationFromEuler(new THREE.Euler( 0, rot, 0, 'XYZ' ));
-				m.visible = true;
+
+				const position = new THREE.Vector3(
+					this.radius * Math.sin(rot),
+					0,
+					this.radius * Math.cos(rot)
+				);
+
+				const rotation = new THREE.Euler( 0, rot, 0, 'XYZ' );
+				quaternion.setFromEuler( rotation );
+
+				matrix.compose( position, quaternion, scale );
+
+				letter.mesh.setMatrixAt( letter.mesh.count++, matrix );
+				letter.mesh.instanceMatrix.needsUpdate = true;
+				letter.mesh.visible = true;
 			}
 
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
-			angleStart -= this.angles[i++] / 2;
+			angleStart -= letter.angle / 2;
 			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
-			angleStart -= this.angles[i] / 2;
+			letter = this.meshesMap.get(this.text[i]);
+			angleStart -= letter.angle / 2;
 		}
 	}
 }
