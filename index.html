@@ -49,7 +49,7 @@
 		import { GlitchPass } from 'glitchPass';
 
 		let camera, scene, controls, renderer, composer, loader;
-		const cameraPosition = new THREE.Vector3(0, 3, 7);
+		const cameraPosition = new THREE.Vector3(0, 1, 3);
 		let cubeCamera, cubeRenderTarget;
 		let gui, stats;
 		let logo, bg;
@@ -97,16 +97,21 @@
 			camera.position.y = cameraPosition.y;
 			camera.position.z = cameraPosition.z;
 
-			const pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+			const pointLight = new THREE.PointLight( 0xffffff, 1.8 );
 			pointLight.position.set( 0, 2, 2 );
 			camera.add( pointLight );
 			scene.add( camera );
 
-			//const mat = new THREE.MeshStandardMaterial({color: 0x00ff00, flatShading:true, side:THREE.FrontSide});
-			const mat = new THREE.MeshStandardMaterial({color: 0xccccff, flatShading:true, side:THREE.FrontSide});
-
 			// background
-			bg = new Background(8, 15, mat);
+			bg = new Background(8, 15,
+				new THREE.MeshStandardMaterial({
+					//color: 0x00ff00,
+					color: 0x6666aa,
+					flatShading: true,
+					//metalness: 0.8, roughness: 0.1,
+					side:THREE.FrontSide
+				})
+			);
 			scene.add(bg.bgGroup);
 
 			// reflection on cube map for logo
@@ -115,8 +120,8 @@
 			cubeCamera = new THREE.CubeCamera( 0.01, 20, cubeRenderTarget );
 			const matLogo = new THREE.MeshStandardMaterial({
 				envMap: cubeRenderTarget.texture,
-				roughness: 0.05,
 				metalness: 1,
+				roughness: 0.05,
 				color: 0x4444aa,
 				//flatShading:true,
 			});
@@ -124,14 +129,20 @@
 			// load me a logo
 			loader.load('mesh/reality_logo.glb', function (glTF) {
 				logo = glTF.scene.children[0];
-				//logo.material = new THREE.MeshStandardMaterial({color:0xff000099,flatShading:true});;
+				//logo.geometry.computeVertexNormals();
 				logo.material = matLogo;
 				scene.add(logo);
 			});
 
 			// load me a font and kickstart scrolling
 			loaderFont.load('font/Orbitron_Regular.json', function(font) {
-				const mat = new THREE.MeshStandardMaterial({color: 0x0000ff, flatShading:true, side:THREE.FrontSide});
+				const mat = new THREE.MeshStandardMaterial({
+					color: 0x0000ff,
+					flatShading: false,
+					metalness: 0.8, roughness: 0.2,
+					//transparent: true, opacity: 0.6, side: THREE.DoubleSide
+					side: THREE.FrontSide
+				});
 				const sc = new Scroller(scrollText, font, mat);
 				const sg = sc.create();
 				scene.add(sg);
