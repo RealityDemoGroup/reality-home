@@ -129,7 +129,6 @@
 			// load me a logo
 			loader.load('mesh/reality_logo.glb', function (glTF) {
 				logo = glTF.scene.children[0];
-				//logo.geometry.computeVertexNormals();
 				logo.material = matLogo;
 				scene.add(logo);
 			});
@@ -144,6 +143,9 @@
 					side: THREE.FrontSide
 				});
 				const sc = new Scroller(scrollText, font, mat);
+				sc.radius = 1.8;
+				sc.setFontParams(0.2, 0.1, 1.1, 4);
+				sc.setFontBevel(0.005, 0.005, 1);
 				const sg = sc.create();
 				scene.add(sg);
 				scroll = sc;	// this will enable rendering
