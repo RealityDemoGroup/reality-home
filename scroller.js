@@ -4,6 +4,8 @@ import { TextGeometry } from 'textGeometry';
 class Scroller {
 
 	constructor(text, font, material) {
+		this.PI2 = Math.PI * 2;
+
 		this.text = text;
 		this.font = font;
 		this.material = material;
@@ -104,7 +106,7 @@ class Scroller {
 		const angle = this.widthToAngle(width) * this.letterSpacing;
 		this.angleTotal += angle;
 
-		const maxInstance = Math.ceil(Math.PI * 2 / angle);
+		const maxInstance = Math.ceil(this.PI2 / angle);
 		mi = new THREE.InstancedMesh(g, this.material, maxInstance);
 		mi.name = letter;
 		mi.visible = false;
@@ -127,34 +129,25 @@ class Scroller {
 	}
 
 	render(time) {
-		const PI2 = Math.PI * 2;
 		// angle position depending on time
-		const anglePos = time / this.speed;
-		// angle start show
-		let angleStart = anglePos % this.angleTotal;
-		// complete scroll shown repeat it
-		const repeat = anglePos > this.angleTotal;
-		if (repeat) {
-			angleStart += this.angleTotal;
+		let angle = time / this.speed;
+		// clip position angle
+		const tot = this.angleTotal > this.PI2 ? this.angleTotal : Math.round( this.PI2 / this.angleTotal) * this.angleTotal;
+		if (angle > tot) {
+			angle = (angle % tot) + tot;
 		}
 		// find start letter index and correct draw angle start
 		let i = 0;
-		while (angleStart > PI2) {
+		while (angle > this.PI2) {
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
 			let letter = this.meshesMap.get(this.text[i++]);
-			angleStart -= letter.angle / 2;
+			angle -= letter.angle / 2;
 			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
 			letter = this.meshesMap.get(this.text[i]);
-			angleStart -= letter.angle / 2;
-		}
-
-		// ending angle for draw
-		let angleEnd = 0;
-		if (repeat) {
-			angleEnd -= (PI2 - angleStart);
+			angle -= letter.angle / 2;
 		}
 
 		// show scroll letters
@@ -162,10 +155,10 @@ class Scroller {
 		const quaternion = new THREE.Quaternion();
 		const scale = new THREE.Vector3(1,1,1);
 		const matrix = new THREE.Matrix4();
-		while (angleStart > angleEnd) {
+		while (angle > 0) {
 			let letter = this.meshesMap.get(this.text[i++]);
 			if (null != letter.mesh) {
-				const rot = PI2 - angleStart;
+				const rot = this.PI2 - angle;
 
 				const position = new THREE.Vector3(
 					this.radius * Math.sin(rot),
@@ -186,11 +179,11 @@ class Scroller {
 			// NOTE: Letters are centered and width is calculated
 			// on complete letter, spacing is between two half's of letters
 			// move for half width of current letter
-			angleStart -= letter.angle / 2;
+			angle -= letter.angle / 2;
 			i = (i >= this.text.length) ? 0 : i;
 			// move for half width of next letter
 			letter = this.meshesMap.get(this.text[i]);
-			angleStart -= letter.angle / 2;
+			angle -= letter.angle / 2;
 		}
 	}
 }
