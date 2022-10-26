@@ -5,6 +5,9 @@ class Background {
 		this.radius = radius;
 		this.detail = detail;
 		this.material = material;
+		this.speedX = 1000;
+		this.speedY = 400;
+		this.speedZ = 2000;
 		this.create();
 	}
 
@@ -16,7 +19,12 @@ class Background {
 		const p = geo.attributes.position;
 		let noTri = p.count / 3;	// number of triangles
 		//console.log("BG Triangles", noTri);			
-		//noTri = 50;
+		//noTri = 10;
+
+		// instanced pyramid
+		this.bgMesh = this.createInstancedPyramid(this.material, noTri);
+		this.bgGroup.add(this.bgMesh);
+		this.instances = [];
 
 		// do some triangles
 		let o = 0; // offset in arrays
@@ -27,83 +35,119 @@ class Background {
 			o += 3;
 			const v3 = new THREE.Vector3().fromArray(p.array,o);
 			o += 3;
-			this.bgGroup.add(this.createPyramid(v1, v2, v3));
+			this.createInstance(v1, v2, v3);
+			//this.createDebugTriangle(v1, v2, v3);
 		}
 	}
 
-	createPyramid(v1, v2, v3) {
-		// triangle from base vertex
-		const t = new THREE.Triangle(v1, v2, v3);
-		// normal
-		const n = new THREE.Vector3();
-		t.getNormal(n);
-		// midpoint will be v4
-		const v4 = new THREE.Vector3();
-		t.getMidpoint(v4);
-		// center point, center point direction
-		const c = v4.clone();
-		const cd = n.clone();
+	setRotationSpeed(x,y,z) {
+		this.speedX = x;
+		this.speedY = y;
+		this.speedZ = z;
+	}
 
-		// http://www.mathematische-basteleien.de/tetrahedron.htm
-		// height calc
-		const edgeLen = v1.distanceTo(v2);
-		const height = Math.sqrt(3) / 4 * edgeLen; 
-
-		// position 4th vertex
-		n.multiplyScalar(height);	// size normal to height
-		v4.add(n);					// position normal to space
-
-		// position pyramid center point
-		cd.multiplyScalar(height / 3);
-		c.add(cd);
-
-		// position pyramid to center
-		v1.sub(c);
-		v2.sub(c);
-		v3.sub(c);
-		v4.sub(c);
-
-		const pos = new Float32Array([
-			v1.x, v1.y, v1.z,
-			v3.x, v3.y, v3.z,
-			v2.x, v2.y, v2.z,
-
+	/*
+	createDebugTriangle(v1, v2, v3) {
+		const p = new Float32Array([
 			v1.x, v1.y, v1.z,
 			v2.x, v2.y, v2.z,
-			v4.x, v4.y, v4.z,
-			
 			v3.x, v3.y, v3.z,
-			v1.x, v1.y, v1.z,
-			v4.x, v4.y, v4.z,
-
-			v3.x, v3.y, v3.z,
-			v4.x, v4.y, v4.z,
-			v2.x, v2.y, v2.z,
 		]);
 
 		const g = new THREE.BufferGeometry();
-		g.setAttribute( 'position', new THREE.Float32BufferAttribute( pos, 3 ) );
-		g.setAttribute( 'normal', new THREE.Float32BufferAttribute( pos.slice(), 3 ).onUpload( this.disposeArray ) );
-		const m = new THREE.Mesh(g, this.material);
-		m.translateX(c.x);
-		m.translateY(c.y);
-		m.translateZ(c.z);
-		return m;
+		g.setAttribute( 'position', new THREE.Float32BufferAttribute( p, 3 ) );
+
+		const w = new THREE.WireframeGeometry( g );
+		const l = new THREE.LineSegments( w );
+		l.material.depthTest = false;
+		l.material.color.set(0xff0000);
+		this.bgGroup.add(l);
+	}
+	*/
+
+	createInstance(v1, v2, v3) {
+		// triangle from base vertex
+		const t = new THREE.Triangle(v1, v2, v3);
+		const midPoint = new THREE.Vector3();
+		t.getMidpoint(midPoint);
+
+		// calc rotation
+		const mr = new THREE.Matrix4();
+		mr.lookAt(
+			new THREE.Vector3(),
+			midPoint,
+			new THREE.Vector3().subVectors(v3, midPoint).normalize()
+		);
+
+		// calc scale approximation, not really same size triangles
+		const sx = new THREE.Vector3().subVectors(v1, v2).length();
+		const sy = new THREE.Vector3().subVectors(v1, v3).length();
+		const sz = sy / 3 * 2;
+
+		const i = {
+			position: midPoint.clone(),
+			scale: new THREE.Vector3(sx, sy, sz),
+			euler: new THREE.Euler().setFromRotationMatrix(mr, 'XYZ')
+		}
+		this.instances.push(i);
+	}
+
+	createInstancedPyramid(mat, noTri) {
+		const x1 = -0.5;
+		const x2 = 0.5;
+		const len = x2-x1;
+		const yh = Math.sqrt(Math.pow(len, 2) - Math.pow(len / 2, 2));
+		const y1 = -(yh / 3);
+		const y2 = yh / 3 * 2;
+
+		const p = new Float32Array([
+			x1, y1, y2,
+			x2, y1, y2,
+			0, y2, y2,
+
+			x1, y1, y2,
+			0, 0, -y2,
+			x2, y1, y2,
+
+			x2, y1, y2,
+			0, 0, -y2,
+			0, y2, y2,
+
+			0, y2, y2,
+			0, 0, -y2,
+			x1, y1, y2,
+		]);
+
+		const g = new THREE.BufferGeometry();
+		g.setAttribute( 'position', new THREE.Float32BufferAttribute( p, 3 ) );
+		g.setAttribute( 'normal', new THREE.Float32BufferAttribute( p.slice(), 3 ).onUpload( this.disposeArray ) );
+		return new THREE.InstancedMesh(g, mat, noTri);
 	}
 
 	disposeArray() {
 		this.array = null;
 	}
 
-	render(time, speedX, speedY, speedZ) {
-		const rotX = time / speedX;
-		const rotY = time / speedY;
-		const rotZ = time / speedZ;
-		for (let i = 0; i < this.bgGroup.children.length; i++) {
-			this.bgGroup.children[i].rotation.x = rotX;
-			this.bgGroup.children[i].rotation.y = rotY;
-			this.bgGroup.children[i].rotation.z = rotZ;
+	render(time) {
+		const rotX = time / this.speedX;
+		const rotY = time / this.speedY;
+		const rotZ = time / this.speedZ;
+
+		const m = new THREE.Matrix4();
+		for (let i = 0; i < this.instances.length; i++) {
+			const e = this.instances[i];
+			const r = new THREE.Euler(
+				e.euler.x + rotX,
+				e.euler.y + rotY,
+				e.euler.z + rotZ,
+				'XYZ'
+			);
+			const q = new THREE.Quaternion();
+			q.setFromEuler( r );
+			m.compose( e.position, q, e.scale );
+			this.bgMesh.setMatrixAt( i, m );
 		}
+		this.bgMesh.instanceMatrix.needsUpdate = true;
 	}
 }
 

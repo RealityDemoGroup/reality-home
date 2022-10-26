@@ -103,15 +103,15 @@
 			scene.add( camera );
 
 			// background
-			bg = new Background(8, 15,
+			bg = new Background(8, 10,
 				new THREE.MeshStandardMaterial({
-					//color: 0x00ff00,
-					color: 0x6666aa,
+					color: 0x8888cc,
 					flatShading: true,
-					//metalness: 0.8, roughness: 0.1,
-					side:THREE.FrontSide
+					metalness: 0.7, roughness: 0.1,
+					side: THREE.FrontSide
 				})
 			);
+			bg.setRotationSpeed(2000,800,4000);
 			scene.add(bg.bgGroup);
 
 			// reflection on cube map for logo
@@ -120,8 +120,7 @@
 			cubeCamera = new THREE.CubeCamera( 0.01, 20, cubeRenderTarget );
 			const matLogo = new THREE.MeshStandardMaterial({
 				envMap: cubeRenderTarget.texture,
-				metalness: 1,
-				roughness: 0.05,
+				metalness: 1, roughness: 0.05,
 				color: 0x4444aa,
 				//flatShading:true,
 			});
@@ -191,7 +190,7 @@
 
 		function render(time) {
 			if (bg) {
-				bg.render(time, 1000, 400, 2000);
+				bg.render(time);
 			}
 
 			if (logo) {
