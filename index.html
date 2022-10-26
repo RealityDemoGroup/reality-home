@@ -25,6 +25,8 @@
 				"effectComposer": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/EffectComposer.js",
 				"renderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/RenderPass.js",
 				"glitchPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/GlitchPass.js",
+				"shaderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/ShaderPass.js",
+				"rgbShiftShader": "https://unpkg.com/three@0.145.0/examples/jsm/shaders/RGBShiftShader.js",
 				"background": "./background.js",
 				"scroller": "./scroller.js"
 			}
@@ -47,20 +49,25 @@
 		import { EffectComposer } from 'effectComposer';
 		import { RenderPass } from 'renderPass';
 		import { GlitchPass } from 'glitchPass';
+		import { ShaderPass } from 'shaderPass';
+		import { RGBShiftShader } from 'rgbShiftShader';
 
 		let camera, scene, controls, renderer, composer, loader;
 		const cameraPosition = new THREE.Vector3(0, 1, 3);
 		let cubeCamera, cubeRenderTarget;
-		let gui, stats;
+		let gui, guiPostprocessing, guiScrollTest, stats;
 		let logo, bg;
 		let glitchPass;
+		let rgbShiftPass;
 		let loaderFont, scroll;
 		let scrollText = "Welcome to Reality home! This small intro is done for fun by Quille. --->";
 
 		let guiValues = {
 			paused: false,
 			animateCamera: true,
+			postProcess: false,
 			glitchFx: false,
+			rgbShiftShader: false,
 			scrollPos: 0,
 			scrollMin: 0,
 			scrollMax: Math.PI * 4,
@@ -168,7 +175,11 @@
 			composer.addPass( new RenderPass( scene, camera ) );
 			// post process effect 
 			glitchPass = new GlitchPass();
+			glitchPass.enabled = guiValues.glitchFx;
 			composer.addPass( glitchPass );
+			rgbShiftPass = new ShaderPass( RGBShiftShader );
+			rgbShiftPass.enabled = guiValues.rgbShiftShader;
+			composer.addPass( rgbShiftPass );
 
 			controls = new OrbitControls( camera, renderer.domElement );
 
@@ -202,8 +213,11 @@
 			}
 
 			if (scroll) {
-				scroll.render(time);
-				//scroll.render(guiValues.scrollPos * scroll.speed);
+				if (guiScrollTest._closed) {
+					scroll.render(time);
+				} else {
+					scroll.render(guiValues.scrollPos * scroll.speed);
+				}
 			}
 
 			// animate camera
@@ -217,7 +231,9 @@
 				camera.lookAt(0,0,0);
 			}
 
-			if (guiValues.glitchFx) {
+			if (!guiPostprocessing._closed) {
+				glitchPass.enabled = guiValues.glitchFx;
+				rgbShiftPass.enabled = guiValues.rgbShiftShader;
 				composer.render();
 			} else {
 				renderer.render( scene, camera );
@@ -241,10 +257,16 @@
 				camera.lookAt(0,0,0);
 			}
 		});;
-		gui.add(guiValues, 'glitchFx');
-		//gui.add(guiValues, 'scrollPos', guiValues.scrollMin, guiValues.scrollMax, guiValues.scrollStep).listen();
-		//gui.add(guiValues, 'scrollUp');
-		//gui.add(guiValues, 'scrollDown');
+		guiPostprocessing = gui.addFolder("Postprocessing");
+		guiPostprocessing.open(false);
+		guiPostprocessing.add(guiValues, 'glitchFx')
+		guiPostprocessing.add(guiValues, 'rgbShiftShader')
+
+		guiScrollTest = gui.addFolder("Scroll test")
+		guiScrollTest.open(false);
+		guiScrollTest.add(guiValues, 'scrollPos', guiValues.scrollMin, guiValues.scrollMax, guiValues.scrollStep).listen();
+		guiScrollTest.add(guiValues, 'scrollUp');
+		guiScrollTest.add(guiValues, 'scrollDown');
 
 		// start all
 		init();	
