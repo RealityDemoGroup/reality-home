@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TextGeometry } from 'textGeometry';
 
-class Scroller {
+class ScrollerTorus {
 
 	constructor(text, font, material) {
 		this.PI2 = Math.PI * 2;
@@ -13,13 +13,33 @@ class Scroller {
 		this.setFontParams(0.5, 0.3, 1.1, 4);
 		this.setFontBevel(0.02, 0.02, 1);
 		
-		this.radius = 3;
-		this.speed = 2000;
+		this.setRadius(3, 0.5, 2);
+		this.setSpeed(2000, 4000);
 
 		this.meshesMap = new Map();
 		this.angleTotal = 0;
 
 		this.scroll = null;
+	}
+
+	setRadius(radius, radiusTorus, twists) {
+		this.radius = radius;
+		this.radiusTorus = radiusTorus;
+		this.radiusOuter = this.radius + this.radiusTorus;
+		// number of scroll twists around torus
+		this.twists = twists;
+		this.angleStepTorus = this.PI2 / (360 / this.twists);
+		// calculate max letter slant
+		const torusLen = this.radius * 2 * Math.PI;
+		const torusSegmentLen = torusLen / this.twists;
+		// angle between torus diameter and torus segment length
+		// x2 because slanting left and right, not ideal could be better
+		this.letterSlantMax = Math.atan(this.radiusTorus * 2 / torusSegmentLen) * 2;
+	}
+
+	setSpeed(speed, speedTorus) {
+		this.speed = speed;
+		this.speedTorus = speedTorus;
 	}
 
 	setFontParams(size, height, letterSpacing, curveSegments) {
@@ -39,7 +59,7 @@ class Scroller {
 	}
 
 	widthToAngle(width) {
-		return Math.asin(width / 2 / this.radius) * 2;
+		return Math.asin(width / 2 / this.radiusOuter) * 2;
 	}
 
 	create() {
@@ -83,7 +103,7 @@ class Scroller {
 			}
 			this.createLetter(letter, lineHeight, txtGeoParams);
 		}
-		console.log("Total scroll angle", this.angleTotal);
+		console.log("Total scroll torus angle", this.angleTotal);
 		return this.scroll;
 	}
 
@@ -132,10 +152,14 @@ class Scroller {
 		// angle position depending on time
 		let angle = time / this.speed;
 		// clip position angle
-		const tot = this.angleTotal > this.PI2 ? this.angleTotal : Math.floor( this.PI2 / this.angleTotal) * this.angleTotal + this.angleTotal;
+		let tot = this.angleTotal > this.PI2 ? this.angleTotal : Math.floor( this.PI2 / this.angleTotal) * this.angleTotal + this.angleTotal;
 		if (angle > tot) {
 			angle = (angle % tot) + tot;
 		}
+
+		// angle position on torus surface from corrected angle
+		let angleTorus = (angle * this.speed / this.speedTorus) % this.PI2;
+
 		// find start letter index and correct draw angle start
 		let i = 0;
 		while (angle > this.PI2) {
@@ -148,6 +172,9 @@ class Scroller {
 			// move for half width of next letter
 			letter = this.meshesMap.get(this.text[i]);
 			angle -= letter.angle / 2;
+			
+			// move around torus
+			angleTorus -= this.angleStepTorus;
 		}
 
 		// show scroll letters
@@ -160,13 +187,21 @@ class Scroller {
 			if (null != letter.mesh) {
 				const rot = this.PI2 - angle;
 
+				// position on torus
+				const torusX = this.radiusTorus * Math.cos(angleTorus);
+				const torusY = this.radiusTorus * Math.sin(angleTorus);
 				const position = new THREE.Vector3(
-					this.radius * Math.sin(rot),
-					0,
-					this.radius * Math.cos(rot)
+					(this.radius + torusX) * Math.sin(rot),
+					torusY,
+					(this.radius + torusX) * Math.cos(rot)
 				);
 
-				const rotation = new THREE.Euler( 0, rot, 0, 'XYZ' );
+				// rotation is in different order to allow letter tilt and slant around torus
+				const tilt = -angleTorus;
+				const slant = Math.sin(angleTorus) * this.letterSlantMax - this.letterSlantMax;
+				const rotation = new THREE.Euler(
+					tilt, rot, slant, 'YXZ'
+				);
 				quaternion.setFromEuler( rotation );
 
 				matrix.compose( position, quaternion, scale );
@@ -184,8 +219,11 @@ class Scroller {
 			// move for half width of next letter
 			letter = this.meshesMap.get(this.text[i]);
 			angle -= letter.angle / 2;
+
+			// move around torus
+			angleTorus -= this.angleStepTorus;
 		}
 	}
 }
 
-export { Scroller };
+export { ScrollerTorus };
