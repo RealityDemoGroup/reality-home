@@ -57,7 +57,7 @@
 		import { RGBShiftShader } from 'rgbShiftShader';
 
 		let camera, scene, controls, renderer, composer, loader;
-		const cameraPosition = new THREE.Vector3(0, 1, 3);
+		const cameraPosition = new THREE.Vector3(0, 0, 3.2);
 		let cubeCamera, cubeRenderTarget;
 		let gui, guiPostprocessing, guiScrollTest, stats;
 		let logo, bg;
@@ -103,6 +103,9 @@
 			initLoader();
 
 			scene = new THREE.Scene();
+
+			//const axesHelper = new THREE.AxesHelper( 5 );
+			//scene.add( axesHelper );
 
 			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.01, 20 );
 			camera.position.x = cameraPosition.x;
@@ -164,7 +167,7 @@
 
 				// torus scroller
 				const matTorus = new THREE.MeshStandardMaterial({
-					color: 0xff0000,
+					color: 0xcc2222,
 					flatShading: false,
 					metalness: 0.8, roughness: 0.2,
 					//transparent: true, opacity: 0.6, side: THREE.DoubleSide
@@ -215,6 +218,10 @@
 			renderer.setSize( window.innerWidth, window.innerHeight );
 		}
 
+		function pingPong(time, speed, max) {
+			return Math.sin(time / speed) * max;
+		}
+
 		function animate(time) {
 			render(time);
 			stats.update();
@@ -226,7 +233,7 @@
 			}
 
 			if (logo) {
-				logo.rotation.y = time / 8000;
+				logo.rotation.y = time / 6000;
 				// reflection on cube map
 				logo.visible = false;
 				cubeCamera.update( renderer, scene );
@@ -251,7 +258,12 @@
 
 			// animate camera
 			if (guiValues.animateCamera) {
-				const cr = new THREE.Euler( time / 8000, time / 12000, time / 4000, 'XYZ' );
+				const cr = new THREE.Euler(
+					pingPong(time, 6000, Math.PI / 12), 
+					0, //pingPong(time, 3000, Math.PI / 6), 
+					pingPong(time, 4000, Math.PI / 12),
+					'XYZ'
+				);
 				const cp = cameraPosition.clone();
 				cp.applyEuler(cr);
 				camera.position.x = cp.x;
