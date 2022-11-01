@@ -27,6 +27,7 @@
 				"glitchPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/GlitchPass.js",
 				"shaderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/ShaderPass.js",
 				"rgbShiftShader": "https://unpkg.com/three@0.145.0/examples/jsm/shaders/RGBShiftShader.js",
+				"vertexNormalsHelper": "https://unpkg.com/three@0.145.0/examples/jsm/helpers/VertexNormalsHelper.js",
 				"background": "./background.js",
 				"scroller": "./scroller.js",
 				"scrollerTorus": "./scrollertorus.js"
@@ -41,6 +42,7 @@
 		import { OrbitControls } from 'orbitcontrols';
 		import { GLTFLoader } from 'gltfLoader';
 		import { DRACOLoader } from 'dracoLoader';
+		//import { VertexNormalsHelper } from 'vertexNormalsHelper';
 		import { FontLoader } from 'fontLoader';
 		import { TextGeometry } from 'textGeometry';
 
@@ -139,6 +141,8 @@
 			loader.load('mesh/reality_logo.glb', function (glTF) {
 				logo = glTF.scene.children[0];
 				logo.material = matLogo;
+				//const normals = new VertexNormalsHelper( logo, 0.1, 0xff0000 );
+				//logo.add(normals);
 				scene.add(logo);
 			});
 
@@ -151,11 +155,9 @@
 					//transparent: true, opacity: 0.6, side: THREE.DoubleSide
 					side: THREE.FrontSide
 				});
-				const sc = new Scroller(scrollText, font, mat);
-				sc.speed = 1000;
+				const sc = new Scroller(scrollText, font, 0.2, mat);
 				sc.radius = 1.8;
-				sc.setFontParams(0.2, 0.1, 1.1, 4);
-				sc.setFontBevel(0.005, 0.005, 1);
+				sc.speed = 3000;
 				const sg = sc.create();
 				scene.add(sg);
 				scroll = sc;	// this will enable rendering
@@ -168,11 +170,9 @@
 					//transparent: true, opacity: 0.6, side: THREE.DoubleSide
 					side: THREE.FrontSide
 				});
-				const scTorus = new ScrollerTorus(scrollTextTorus, font, matTorus);
-				scTorus.setRadius(1.8 + sc.fontHeight / 2, 0.2, 8);
+				const scTorus = new ScrollerTorus(scrollTextTorus, font, 0.07, matTorus);
+				scTorus.setRadius(1.8 + sc.fontHeight * sc.fontScale / 2, 0.2, 8);
 				scTorus.setSpeed(3000, 1000);
-				scTorus.setFontParams(0.2 / 4, 0.1 / 4, 1.2, 4);
-				scTorus.setFontBevel(0.005 / 4, 0.005 / 4, 1);
 				const sgTorus = scTorus.create();
 				scene.add(sgTorus);
 				scrollTorus = scTorus;	// this will enable rendering

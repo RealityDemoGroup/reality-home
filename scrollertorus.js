@@ -3,15 +3,16 @@ import { TextGeometry } from 'textGeometry';
 
 class ScrollerTorus {
 
-	constructor(text, font, material) {
+	constructor(text, font, fontScale, material) {
 		this.PI2 = Math.PI * 2;
 
 		this.text = text;
 		this.font = font;
 		this.material = material;
 
-		this.setFontParams(0.5, 0.3, 1.1, 4);
-		this.setFontBevel(0.02, 0.02, 1);
+		// defaults for font, scale controls size
+		this.setFontParams(fontScale, 1, 0.6, 1.1, 4);
+		this.setFontBevel(0.04, 0.04, 1);
 		
 		this.setRadius(3, 0.5, 2);
 		this.setSpeed(2000, 4000);
@@ -42,7 +43,8 @@ class ScrollerTorus {
 		this.speedTorus = speedTorus;
 	}
 
-	setFontParams(size, height, letterSpacing, curveSegments) {
+	setFontParams(scale, size, height, letterSpacing, curveSegments) {
+		this.fontScale = scale;
 		this.fontSize = size;
 		this.fontHeight = height;
 		this.letterSpacing = letterSpacing;
@@ -59,7 +61,7 @@ class ScrollerTorus {
 	}
 
 	widthToAngle(width) {
-		return Math.asin(width / 2 / this.radiusOuter) * 2;
+		return Math.asin(width * this.fontScale / 2 / this.radius) * 2 * this.letterSpacing;
 	}
 
 	create() {
@@ -68,16 +70,17 @@ class ScrollerTorus {
 
 		// ref: https://github.com/mrdoob/three.js/blob/master/examples/jsm/loaders/FontLoader.js
 		// scale and line height from font
-		const fontScale = this.fontSize / this.font.data.resolution;
-		const lineHeight = ( this.font.data.boundingBox.yMax - this.font.data.boundingBox.yMin + this.font.data.underlineThickness ) * fontScale;
+		const glyphScale = this.fontSize / this.font.data.resolution;
+		const lineHeight = ( this.font.data.boundingBox.yMax - this.font.data.boundingBox.yMin + this.font.data.underlineThickness ) * glyphScale;
 		// space letter width
 		const spaceGlyph = this.font.data.glyphs[" "];
-		const spaceWidth = spaceGlyph.ha * fontScale;
+		const spaceWidth = spaceGlyph.ha * glyphScale;
 		// space angle
-		const spaceAngle = this.widthToAngle(spaceWidth) * this.letterSpacing;
+		const spaceAngle = this.widthToAngle(spaceWidth);
 
 		// add space to meshes map to have angle width
 		this.meshesMap.set(" ", {
+			width: spaceWidth,
 			angle: spaceAngle,
 			mesh: null
 		});
@@ -123,7 +126,7 @@ class ScrollerTorus {
 		const centerOffsetY = -0.25 * lineHeight;
 		g.translate(centerOffsetX, centerOffsetY, 0);
 
-		const angle = this.widthToAngle(width) * this.letterSpacing;
+		const angle = this.widthToAngle(width);
 		this.angleTotal += angle;
 
 		const maxInstance = Math.ceil(this.PI2 / angle);
@@ -132,6 +135,7 @@ class ScrollerTorus {
 		mi.visible = false;
 		mi.count = 0; // no instances displayed
 		this.meshesMap.set(letter, {
+			width: width,
 			angle: angle,
 			mesh: mi
 		});
@@ -180,7 +184,7 @@ class ScrollerTorus {
 		// show scroll letters
 		this.hideAll();
 		const quaternion = new THREE.Quaternion();
-		const scale = new THREE.Vector3(1,1,1);
+		const scale = new THREE.Vector3(this.fontScale,this.fontScale,this.fontScale);
 		const matrix = new THREE.Matrix4();
 		while (angle > 0) {
 			let letter = this.meshesMap.get(this.text[i++]);
