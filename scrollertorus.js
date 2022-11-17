@@ -155,14 +155,23 @@ class ScrollerTorus {
 	render(time) {
 		// angle position depending on time
 		let angle = time / this.speed;
+		let angleOrg = angle;
+		// angle position on torus surface from corrected angle
+		let angleTorus = (time / this.speedTorus); // % this.PI2;
+		let angleTorusCalc = angleTorus;
 		// clip position angle
 		let tot = this.angleTotal > this.PI2 ? this.angleTotal : Math.floor( this.PI2 / this.angleTotal) * this.angleTotal + this.angleTotal;
 		if (angle > tot) {
-			angle = (angle % tot) + tot;
+			let diff = angle - ((angle % tot) + tot);
+			//angle = (angle % tot) + tot;
+			diff = Math.floor(angle / tot);
+			//if (diff > 1) {
+			//	diff --;
+			//} 
+			diff *= this.text.length * this.angleStepTorus;
+			angleTorusCalc -= diff;
+			//angleTorus -= Math.floor(diff / tot) * this.text.length * this.angleStepTorus;
 		}
-
-		// angle position on torus surface from corrected angle
-		let angleTorus = (angle * this.speed / this.speedTorus) % this.PI2;
 
 		// find start letter index and correct draw angle start
 		let i = 0;
@@ -179,6 +188,12 @@ class ScrollerTorus {
 			
 			// move around torus
 			angleTorus -= this.angleStepTorus;
+			angleTorusCalc -= this.angleStepTorus;
+		}
+
+		if (angleTorus != angleTorusCalc) {
+			console.log(angleOrg, angleTorus, angleTorusCalc, angleTorus - angleTorusCalc, (angleTorus - angleTorusCalc) / this.angleStepTorus);
+			debugger;
 		}
 
 		// show scroll letters

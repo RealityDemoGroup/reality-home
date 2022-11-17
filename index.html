@@ -73,10 +73,10 @@
 			postProcess: false,
 			glitchFx: false,
 			rgbShiftShader: false,
-			scrollPos: 23.535764963144576, //12.5750972606189, // 12.583823906878871 //17.02568685320481, // Math.PI * 5,
+			scrollPos: 0,
 			scrollMin: 0,
 			scrollMax: Math.PI * 8,
-			scrollStep: Math.PI / 360,
+			scrollStep: Math.PI / (360 * 4),
 			scrollUp: function() {
 				guiValues.scrollPos += guiValues.scrollStep;
 			},
@@ -243,6 +243,7 @@
 			if (scroll) {
 				if (guiScrollTest._closed) {
 					scroll.render(time);
+					guiValues.scrollPos = time / scroll.speed;
 				} else {
 					scroll.render(guiValues.scrollPos * scroll.speed);
 				}
