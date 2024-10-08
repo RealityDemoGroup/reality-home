@@ -10,24 +10,24 @@
 <body>
 	<!-- Import maps polyfill -->
 	<!-- Remove this when import maps will be widely supported -->
-	<script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+	<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 	<script type="importmap">
 		{
 			"imports": {
-				"three": "https://unpkg.com/three@0.145.0/build/three.module.js",
-				"stats": "https://unpkg.com/three@0.145.0/examples/jsm/libs/stats.module.js",
-				"gui": "https://unpkg.com/three@0.145.0/examples/jsm/libs/lil-gui.module.min.js",
-				"gltfLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/GLTFLoader.js",
-				"dracoLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/DRACOLoader.js",
-				"fontLoader": "https://unpkg.com/three@0.145.0/examples/jsm/loaders/FontLoader.js",
-				"textGeometry": "https://unpkg.com/three@0.145.0/examples/jsm/geometries/TextGeometry.js",
-				"orbitcontrols": "https://unpkg.com/three@0.145.0/examples/jsm/controls/OrbitControls.js",
-				"effectComposer": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/EffectComposer.js",
-				"renderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/RenderPass.js",
-				"glitchPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/GlitchPass.js",
-				"shaderPass": "https://unpkg.com/three@0.145.0/examples/jsm/postprocessing/ShaderPass.js",
-				"rgbShiftShader": "https://unpkg.com/three@0.145.0/examples/jsm/shaders/RGBShiftShader.js",
-				"vertexNormalsHelper": "https://unpkg.com/three@0.145.0/examples/jsm/helpers/VertexNormalsHelper.js",
+				"three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+				"stats": "https://unpkg.com/three@0.169.0/examples/jsm/libs/stats.module.js",
+				"gui": "https://unpkg.com/three@0.169.0/examples/jsm/libs/lil-gui.module.min.js",
+				"gltfLoader": "https://unpkg.com/three@0.169.0/examples/jsm/loaders/GLTFLoader.js",
+				"dracoLoader": "https://unpkg.com/three@0.169.0/examples/jsm/loaders/DRACOLoader.js",
+				"fontLoader": "https://unpkg.com/three@0.169.0/examples/jsm/loaders/FontLoader.js",
+				"textGeometry": "https://unpkg.com/three@0.169.0/examples/jsm/geometries/TextGeometry.js",
+				"orbitcontrols": "https://unpkg.com/three@0.169.0/examples/jsm/controls/OrbitControls.js",
+				"effectComposer": "https://unpkg.com/three@0.169.0/examples/jsm/postprocessing/EffectComposer.js",
+				"renderPass": "https://unpkg.com/three@0.169.0/examples/jsm/postprocessing/RenderPass.js",
+				"glitchPass": "https://unpkg.com/three@0.169.0/examples/jsm/postprocessing/GlitchPass.js",
+				"shaderPass": "https://unpkg.com/three@0.169.0/examples/jsm/postprocessing/ShaderPass.js",
+				"rgbShiftShader": "https://unpkg.com/three@0.169.0/examples/jsm/shaders/RGBShiftShader.js",
+				"vertexNormalsHelper": "https://unpkg.com/three@0.169.0/examples/jsm/helpers/VertexNormalsHelper.js",
 				"background": "./background.js",
 				"scroller": "./scroller.js",
 				"scrollerTorus": "./scrollertorus.js"
@@ -88,7 +88,7 @@
 		function initLoader(){
 			// mesh loader
 			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath('https://unpkg.com/three@0.145.0/examples/js/libs/draco/');
+			dracoLoader.setDecoderPath('https://unpkg.com/three@0.169.0/examples/jsm/libs/draco/');
 			// (Optional) Override detection of WASM support.
 			//dracoLoader.setDecoderConfig({type: 'js'});
 			// init object loader with decompressor
@@ -112,7 +112,7 @@
 			camera.position.y = cameraPosition.y;
 			camera.position.z = cameraPosition.z;
 
-			const pointLight = new THREE.PointLight( 0xffffff, 1.8 );
+			const pointLight = new THREE.PointLight( 0xffffff, 3, 20, 0.01 );
 			pointLight.position.set( 0, 2, 2 );
 			camera.add( pointLight );
 			scene.add( camera );

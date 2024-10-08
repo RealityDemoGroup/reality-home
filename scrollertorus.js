@@ -191,10 +191,10 @@ class ScrollerTorus {
 			angleTorusCalc -= this.angleStepTorus;
 		}
 
-		if (angleTorus != angleTorusCalc) {
-			console.log(angleOrg, angleTorus, angleTorusCalc, angleTorus - angleTorusCalc, (angleTorus - angleTorusCalc) / this.angleStepTorus);
-			debugger;
-		}
+		//if (angleTorus != angleTorusCalc) {
+		//	console.log(angleOrg, angleTorus, angleTorusCalc, angleTorus - angleTorusCalc, (angleTorus - angleTorusCalc) / this.angleStepTorus);
+		//	debugger;
+		//}
 
 		// show scroll letters
 		this.hideAll();
