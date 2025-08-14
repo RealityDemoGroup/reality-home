@@ -8,6 +8,11 @@
 	<link type="text/css" rel="stylesheet" href="main.css">
 </head>
 <body>
+	<div id="loader">
+		<h1>Reality Home</h1>
+		<div id="loading"><div></div></div>
+		<div id="playButton"><span>Play</span></div>
+	</div>
 	<!-- Import maps polyfill -->
 	<!-- Remove this when import maps will be widely supported -->
 	<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
@@ -70,7 +75,7 @@
 		let scrollTextTorus = "This twist scroller is bit different, not really good looking but good enough. --->";
 
 		let guiValues = {
-			music: false,
+			music: true,
 			paused: false,
 			animateCamera: true,
 			postProcess: false,
@@ -88,8 +93,22 @@
 			}
 		}
 
+		// GUI Only on localhost for testing
+		let isLocalHost = ['localhost', '127.0.0.1', '::1', ''].includes(window.location.hostname) || window.location.hostname.endsWith('.localhost');
+
 		const modPlayer = new ModPlayer(new AudioContext());
-    	await modPlayer.load('audio/juice_the_crunch.mod');
+
+		THREE.DefaultLoadingManager.onLoad = async function() {
+			//console.log( 'Loading Complete!');
+			await modPlayer.load('audio/juice_the_crunch.mod');
+			document.querySelector("#loading").style.display = 'none';
+			document.querySelector("#playButton").style.display = 'inherit';
+		};
+
+		THREE.DefaultLoadingManager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
+			//console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+			document.querySelector("#loading>div").style.width = (itemsLoaded / itemsTotal * 100).toFixed(2)  + '%';
+		};
 
 		function initLoader(){
 			// mesh loader
@@ -195,10 +214,6 @@
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			//renderer.outputEncoding = THREE.sRGBEncoding;
 			//renderer.toneMapping = THREE.ACESFilmicToneMapping;
-			if (!guiValues.paused) {
-				renderer.setAnimationLoop( animate );
-			}
-			document.body.appendChild( renderer.domElement );
 
 			// postprocessing
 			composer = new EffectComposer( renderer );
@@ -213,9 +228,12 @@
 
 			controls = new OrbitControls( camera, renderer.domElement );
 
-			stats = new Stats();
-			document.body.appendChild( stats.dom );
-			window.addEventListener( 'resize', onWindowResize );
+			// Stats and GUI only on local host
+			if (isLocalHost) {
+				stats = new Stats();
+				document.body.appendChild( stats.dom );
+				initGUI();
+			}
 		}
 
 		function onWindowResize() {
@@ -228,9 +246,34 @@
 			return Math.sin(time / speed) * max;
 		}
 
+		function startAll()
+		{
+			document.body.appendChild( renderer.domElement );
+			window.addEventListener( 'resize', onWindowResize );
+
+			if (guiValues.music) {
+				modPlayer.play();
+			}
+			// add animation handler to start
+			renderer.setAnimationLoop( animate );
+		}
+
+		let lastTime = 0;
+		let elapsedTime = 0;
+
 		function animate(time) {
-			render(time);
-			stats.update();
+			// catchup with THREE internal time
+			if (0 == lastTime) { lastTime = time; }
+			// no time advances when paused
+			if (!guiValues.paused) {
+				elapsedTime += time - lastTime;
+			}
+			lastTime = time;
+			// render and update
+			render(elapsedTime);
+			if (stats) {
+				stats.update();
+			}
 		}
 
 		function render(time) {
@@ -247,7 +290,7 @@
 			}
 
 			if (scroll) {
-				if (guiScrollTest._closed) {
+				if (!guiScrollTest || guiScrollTest._closed) {
 					scroll.render(time);
 					guiValues.scrollPos = time / scroll.speed;
 				} else {
@@ -256,7 +299,7 @@
 			}
 
 			if (scrollTorus) {
-				if (guiScrollTest._closed) {
+				if (!guiScrollTest || guiScrollTest._closed) {
 					scrollTorus.render(time);
 				} else {
 					scrollTorus.render(guiValues.scrollPos * scrollTorus.speed);
@@ -279,7 +322,7 @@
 				camera.lookAt(0,0,0);
 			}
 
-			if (!guiPostprocessing._closed) {
+			if (guiPostprocessing && !guiPostprocessing._closed) {
 				glitchPass.enabled = guiValues.glitchFx;
 				rgbShiftPass.enabled = guiValues.rgbShiftShader;
 				composer.render();
@@ -288,43 +331,50 @@
 			}
 		}
 
-		// gui stuff
-		gui = new GUI();
-		gui.add(guiValues, 'music').onChange(function(music){
-			if (music && !modPlayer.playing) {
-				modPlayer.play();
-			} else {
-				modPlayer.stop();
-			}
-		});
-		gui.add(guiValues, 'paused').onChange(function(paused) {
-			if (!paused) {
-				renderer.setAnimationLoop( animate );
-			} else {
-				renderer.setAnimationLoop( null );
-			}
-		});
-		gui.add(guiValues, 'animateCamera').onChange(function(animateCamera) {
-			if (!animateCamera) {
-				camera.position.x = cameraPosition.x;
-				camera.position.y = cameraPosition.y;
-				camera.position.z = cameraPosition.z;
-				camera.lookAt(0,0,0);
-			}
-		});;
-		guiPostprocessing = gui.addFolder("Postprocessing");
-		guiPostprocessing.open(false);
-		guiPostprocessing.add(guiValues, 'glitchFx')
-		guiPostprocessing.add(guiValues, 'rgbShiftShader')
+		function initGUI(params) {
+			gui = new GUI();
+			gui.add(guiValues, 'music').onChange(function(music){
+				if (music && !modPlayer.playing) {
+					modPlayer.play();
+				} else {
+					modPlayer.stop();
+				}
+			});
+			gui.add(guiValues, 'paused').onChange(function(paused) {
+				if (!guiValues.music) { return; }
+				if (!paused) {
+					modPlayer.resume();
+				} else {
+					modPlayer.stop();
+				}
+			});
+			gui.add(guiValues, 'animateCamera').onChange(function(animateCamera) {
+				if (!animateCamera) {
+					camera.position.x = cameraPosition.x;
+					camera.position.y = cameraPosition.y;
+					camera.position.z = cameraPosition.z;
+					camera.lookAt(0,0,0);
+				}
+			});;
+			guiPostprocessing = gui.addFolder("Postprocessing");
+			guiPostprocessing.open(false);
+			guiPostprocessing.add(guiValues, 'glitchFx')
+			guiPostprocessing.add(guiValues, 'rgbShiftShader')
 
-		guiScrollTest = gui.addFolder("Scroll test")
-		guiScrollTest.open(false);
-		guiScrollTest.add(guiValues, 'scrollPos', guiValues.scrollMin, guiValues.scrollMax, guiValues.scrollStep).listen();
-		guiScrollTest.add(guiValues, 'scrollUp');
-		guiScrollTest.add(guiValues, 'scrollDown');
+			guiScrollTest = gui.addFolder("Scroll test")
+			guiScrollTest.open(false);
+			guiScrollTest.add(guiValues, 'scrollPos', guiValues.scrollMin, guiValues.scrollMax, guiValues.scrollStep).listen();
+			guiScrollTest.add(guiValues, 'scrollUp');
+			guiScrollTest.add(guiValues, 'scrollDown');
+		}
 
-		// start all
-		init();	
+		init(); // inti all
+
+		// attach start event
+		document.querySelector("#playButton").addEventListener('click', function(e){
+			document.querySelector("#loader").style.display = 'none';
+			startAll();
+		});
 	</script>
 </body>
 </html>
