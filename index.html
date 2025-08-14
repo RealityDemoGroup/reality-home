@@ -5,6 +5,9 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<title>Reality home</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
 	<link type="text/css" rel="stylesheet" href="main.css">
 </head>
 <body>
@@ -71,7 +74,7 @@
 		let glitchPass;
 		let rgbShiftPass;
 		let loaderFont, scroll, scrollTorus;
-		let scrollText = "Welcome to Reality home! This small intro is done for fun by Quille. --->";
+		let scrollText = "Welcome to Reality home! This small intro is done for fun by Quille, Music by Juice. --->";
 		let scrollTextTorus = "This twist scroller is bit different, not really good looking but good enough. --->";
 
 		let guiValues = {
@@ -253,6 +256,20 @@
 
 			if (guiValues.music) {
 				modPlayer.play();
+				// restart music on stop
+				//modPlayer.watchStop(()=> {
+				//	console.log("Mod STOP", pos, row);
+				//	modPlayer.stop();
+				//	modPlayer.play();
+				//});
+				// restart music on end
+				modPlayer.watchRows((pos, row) => {
+					//console.log("Mod pos", pos, row);
+					if (48 === pos && 3 === row) {
+						modPlayer.stop();
+						modPlayer.play();
+					}
+				});
 			}
 			// add animation handler to start
 			renderer.setAnimationLoop( animate );

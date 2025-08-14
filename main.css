@@ -102,7 +102,11 @@ a, button, input, select {
 
 #loader h1 {
 	font-size: 50pt;
-	font-family:Verdana, Geneva, Tahoma, sans-serif;
+	/* font-family:Verdana, Geneva, Tahoma, sans-serif; */
+	font-family: "Orbitron", sans-serif;
+	font-optical-sizing: auto;
+	font-weight: 900;
+	font-style: normal;
 	text-align: center;
 }
 
