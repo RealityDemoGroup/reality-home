@@ -6,3 +6,4 @@ Demo: https://realitydemogroup.github.io/reality-home/
 ## Resources
 Font: https://github.com/theleagueof/orbitron  
 Font converter: https://gero3.github.io/facetype.js/
+Mod player: https://github.com/atornblad/js-mod-player

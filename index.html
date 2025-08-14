@@ -28,6 +28,7 @@
 				"shaderPass": "https://unpkg.com/three@0.169.0/examples/jsm/postprocessing/ShaderPass.js",
 				"rgbShiftShader": "https://unpkg.com/three@0.169.0/examples/jsm/shaders/RGBShiftShader.js",
 				"vertexNormalsHelper": "https://unpkg.com/three@0.169.0/examples/jsm/helpers/VertexNormalsHelper.js",
+				"modPlayer": "https://atornblad.se/files/js-mod-player/player.js",
 				"background": "./background.js",
 				"scroller": "./scroller.js",
 				"scrollerTorus": "./scrollertorus.js"
@@ -38,6 +39,7 @@
 		import * as THREE from 'three';
 		import Stats from 'stats';
 		import GUI from 'gui';
+		import { ModPlayer } from 'modPlayer';
 
 		import { OrbitControls } from 'orbitcontrols';
 		import { GLTFLoader } from 'gltfLoader';
@@ -68,6 +70,7 @@
 		let scrollTextTorus = "This twist scroller is bit different, not really good looking but good enough. --->";
 
 		let guiValues = {
+			music: false,
 			paused: false,
 			animateCamera: true,
 			postProcess: false,
@@ -84,6 +87,9 @@
 				guiValues.scrollPos -= guiValues.scrollStep;
 			}
 		}
+
+		const modPlayer = new ModPlayer(new AudioContext());
+    	await modPlayer.load('audio/juice_the_crunch.mod');
 
 		function initLoader(){
 			// mesh loader
@@ -284,6 +290,13 @@
 
 		// gui stuff
 		gui = new GUI();
+		gui.add(guiValues, 'music').onChange(function(music){
+			if (music && !modPlayer.playing) {
+				modPlayer.play();
+			} else {
+				modPlayer.stop();
+			}
+		});
 		gui.add(guiValues, 'paused').onChange(function(paused) {
 			if (!paused) {
 				renderer.setAnimationLoop( animate );
